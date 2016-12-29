@@ -202,6 +202,7 @@ class Jenkins:
             if new_color != old_color:
                 changes[name] = self.status_change(name, old_color, new_color)
         self.jobs = new_jobs
+        return changes
 
     def update(self):
         changes = None
