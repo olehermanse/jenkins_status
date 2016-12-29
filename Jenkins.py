@@ -67,7 +67,7 @@ class Jenkins:
             jobs[name] = color
         return OrderedDict(sorted(jobs.items()))
 
-    def __init__(self, url = None, *, verbose = False, directory = "./", input_file = None, funcs = {},
+    def __init__(self, url = None, *, verbose = False, directory = ".", input_file = None, funcs = {},
                             func_job_created    = job_created,
                             func_job_deleted    = job_deleted,
                             func_build_passed   = build_passed,
