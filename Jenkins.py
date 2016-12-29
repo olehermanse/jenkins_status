@@ -177,7 +177,7 @@ class Jenkins:
                 self.verbose_print("( {} != {} )".format(old_url, self.url))
         else:
             self.verbose_print("Jenkins URL matches: '{}'.".format(self.url))
-            self.jobs = load_json(self.directory+json_path)
+            self.jobs = load_json(os.path.join(self.directory,json_path))
             self.verbose_print("Read previous status from '{}' succesfully.".format(json_path))
 
     def dump_all(self, *, json_path="jenkins_jobs.json", txt_path="jenkins_server.txt"):
