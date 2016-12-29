@@ -89,8 +89,8 @@ class Jenkins:
             self.url = url
             self.offline = False
         elif input_file is not None:
-            self.input = input_file
-            self.url = self.input
+            self.input_file = input_file
+            self.url = self.input_file
             self.offline = True
         else:
             print("Jenkins class must get either url or input_file as argument.")
