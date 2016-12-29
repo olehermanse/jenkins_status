@@ -67,6 +67,12 @@ class Jenkins:
             jobs[name] = color
         return OrderedDict(sorted(jobs.items()))
 
+    def internal_get(self):
+        if self.offline:
+            return load_json(self.input_file)
+        else:
+            return Jenkins.get_jobs_url(self.url)
+
     def __init__(self, url = None, *, verbose = False, directory = ".", input_file = None, funcs = {},
                             func_job_created    = job_created,
                             func_job_deleted    = job_deleted,
@@ -197,12 +203,9 @@ class Jenkins:
     def update(self):
         changes = None
         if not self.jobs:
-            self.jobs = Jenkins.get_jobs_url(self.url)
-        elif self.offline:
-            new_jobs = load_json(self.input_file)
-            changes = self.offline_update(new_jobs)
+            self.jobs = self.internal_get()
         else:
-            new_jobs = Jenkins.get_jobs_url(self.url)
+            new_jobs = self.internal_get()
             changes = self.offline_update(new_jobs)
         if self.directory:
             self.dump_all()
