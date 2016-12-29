@@ -127,7 +127,7 @@ class Jenkins:
             print(msg)
 
     def print_running_jobs(self):
-        jobs = self.get_running_jobs()
+        jobs = list(self.get_running_jobs())
         if jobs is not None and len(jobs) > 0:
             print( "Running jobs:\n  " + "\n  ".join(jobs) )
         else:
