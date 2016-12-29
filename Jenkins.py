@@ -7,6 +7,7 @@ __author__ = "Ole Herman Schumacher Elgesem"
 import requests
 import json
 from os.path import exists
+import os
 from sys import exit
 from argparse import ArgumentParser
 from time import sleep
@@ -37,10 +38,16 @@ def unknown_colors(name, old_color, new_color, verbose=True):
 
 def write_file(path, data):
     try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as f:
             f.write(data)
     except:
         print("Could not write to '{}'".format(path))
+
+def load_json(path):
+    with open(path, "r") as f:
+        d = json.load(f, object_pairs_hook = OrderedDict)
+    return d
 
 class Jenkins:
     @staticmethod
@@ -60,7 +67,7 @@ class Jenkins:
             jobs[name] = color
         return OrderedDict(sorted(jobs.items()))
 
-    def __init__(self, url, *, verbose = False, directory = "./", funcs = None,
+    def __init__(self, url = None, *, verbose = False, directory = "./", input_file = None, funcs = {},
                             func_job_created    = job_created,
                             func_job_deleted    = job_deleted,
                             func_build_passed   = build_passed,
@@ -68,11 +75,19 @@ class Jenkins:
                             func_build_started  = build_started,
                             func_build_aborted  = build_aborted,
                             func_unknown_colors = unknown_colors):
-        while url[-1] == "/":
-            url = url[:-1]
-        if "http" not in url:
-            url = "https://"+url
-        self.url = url
+        if url is not None:
+            while url[-1] == "/":
+                url = url[:-1]
+            if "http" not in url:
+                url = "https://"+url
+            self.url = url
+            self.offline = False
+        elif input_file is not None:
+            self.input = input_file
+            self.offline = True
+        else:
+            print("Jenkins class must get either url or input_file as argument.")
+            sys.exit(1)
         self.verbose = verbose
         self.directory = directory
         self.funcs = {}
@@ -83,24 +98,22 @@ class Jenkins:
         self.funcs["started"] = func_build_started
         self.funcs["aborted"] = func_build_aborted
         self.funcs["unknown"] = func_unknown_colors
-        for name, func in self.funcs.items():
+        for name, func in funcs.items():
             self.funcs[name] = func
 
         self.jobs = None
         if self.directory:
-
-            if not exists(args.directory):
-                print("Error: directory '{}' doesn't exist".format(args.directory))
+            if not exists(self.directory):
+                os.makedirs(self.directory, exist_ok=True)
             try:
                 self.load_files()
             except FileNotFoundError:
                 self.verbose_print("No files found for server {}.".format(self.url))
 
-        if not self.jobs:
-            self.jobs = Jenkins.get_jobs_url(self.url)
-
-        if self.directory:
-            self.dump_all()
+    def set_func(self, key, func):
+        if key not in self.funcs:
+            raise KeyError
+        funcs[key] = func
 
     def verbose_print(self, msg):
         if self.verbose:
@@ -149,7 +162,7 @@ class Jenkins:
         return json.dumps(self.jobs, indent=indent, ensure_ascii=ensure_ascii)
 
     def load_files(self, *, json_path="jenkins_jobs.json", txt_path="jenkins_server.txt"):
-        with open(self.directory+txt_path, "r") as f:
+        with open(self.directory+"/"+txt_path, "r") as f:
             old_url = f.readline()
         if old_url != self.url:
             if self.verbose:
@@ -157,20 +170,16 @@ class Jenkins:
                 self.verbose_print("( {} != {} )".format(old_url, self.url))
         else:
             self.verbose_print("Jenkins URL matches: '{}'.".format(self.url))
-            with open(self.directory+json_path, "r") as f:
-                self.jobs = json.load(f, object_pairs_hook=OrderedDict)
+            self.jobs = load_json(self.directory+json_path)
             self.verbose_print("Read previous status from '{}' succesfully.".format(json_path))
-            self.update()
 
     def dump_all(self, *, json_path="jenkins_jobs.json", txt_path="jenkins_server.txt"):
-        write_file(self.directory+json_path, self.get_jobs_json())
-        write_file(self.directory+txt_path, self.url)
+        write_file(self.directory+"/"+json_path, self.get_jobs_json())
+        write_file(self.directory+"/"+txt_path, self.url)
 
-    def update(self):
+    def offline_update(self, new_jobs):
         changes = OrderedDict()
-        new_jobs = Jenkins.get_jobs_url(self.url)
         old_jobs = self.jobs
-
         for name in old_jobs:
             if name not in new_jobs:
                 changes[name] = self.call("deleted", name)
@@ -183,6 +192,17 @@ class Jenkins:
             if new_color != old_color:
                 changes[name] = self.status_change(name, old_color, new_color)
         self.jobs = new_jobs
+
+    def update(self):
+        changes = None
+        if not self.jobs:
+            self.jobs = Jenkins.get_jobs_url(self.url)
+        elif self.offline:
+            new_jobs = load_json(self.input_file)
+            changes = self.offline_update(new_jobs)
+        else:
+            new_jobs = Jenkins.get_jobs_url(self.url)
+            changes = self.offline_update(new_jobs)
         if self.directory:
             self.dump_all()
         return changes
@@ -206,6 +226,7 @@ if __name__ == "__main__":
         print("Error: nothing to do. Use --help for more info.")
         exit(1)
     jenkins = Jenkins(args.url, verbose = args.verbose, directory = args.directory)
+    jenkins.update()
     if args.running:
         jenkins.print_running_jobs()
     while args.loop:
