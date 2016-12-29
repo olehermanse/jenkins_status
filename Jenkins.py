@@ -127,8 +127,11 @@ class Jenkins:
             print(msg)
 
     def print_running_jobs(self):
-        print( "Running jobs:\n  " +
-               "\n  ".join(self.get_running_jobs()) )
+        jobs = self.get_running_jobs()
+        if jobs:
+            print( "Running jobs:\n  " + "\n  ".join(jobs) )
+        else:
+            print( "No running jobs:")
 
     def get_job_names(self):
         for name in self.jobs:
@@ -177,7 +180,7 @@ class Jenkins:
                 self.verbose_print("( {} != {} )".format(old_url, self.url))
         else:
             self.verbose_print("Jenkins URL matches: '{}'.".format(self.url))
-            self.jobs = load_json(os.path.join(self.directory,json_path))
+            self.jobs = load_json(os.path.join(self.directory, json_path))
             self.verbose_print("Read previous status from '{}' succesfully.".format(json_path))
 
     def dump_all(self, *, json_path="jenkins_jobs.json", txt_path="jenkins_server.txt"):
@@ -235,4 +238,4 @@ if __name__ == "__main__":
         jenkins.print_running_jobs()
     while args.loop:
         sleep(5)
-        jenkins.update()
+        changes = jenkins.update()
