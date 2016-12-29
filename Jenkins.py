@@ -163,7 +163,7 @@ class Jenkins:
         return json.dumps(self.jobs, indent=indent, ensure_ascii=ensure_ascii)
 
     def load_files(self, *, json_path="jenkins_jobs.json", txt_path="jenkins_server.txt"):
-        with open(self.directory+"/"+txt_path, "r") as f:
+        with open(os.path.join(self.director,txt_path), "r") as f:
             old_url = f.readline()
         if old_url != self.url:
             if self.verbose:
@@ -175,8 +175,8 @@ class Jenkins:
             self.verbose_print("Read previous status from '{}' succesfully.".format(json_path))
 
     def dump_all(self, *, json_path="jenkins_jobs.json", txt_path="jenkins_server.txt"):
-        write_file(self.directory+"/"+json_path, self.get_jobs_json())
-        write_file(self.directory+"/"+txt_path, self.url)
+        write_file(os.path.join(self.directory, json_path), self.get_jobs_json())
+        write_file(os.path.join(self.directory, txt_path) , self.url)
 
     def offline_update(self, new_jobs):
         changes = OrderedDict()
