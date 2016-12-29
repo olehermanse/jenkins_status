@@ -137,6 +137,12 @@ class Jenkins:
         for name in self.jobs:
             yield name
 
+    def get_job_status(self, name):
+        try:
+            return self.jobs[name]
+        except:
+            return None
+
     def get_running_jobs(self):
         for name, color in self.jobs.items():
             if "anime" in color:
